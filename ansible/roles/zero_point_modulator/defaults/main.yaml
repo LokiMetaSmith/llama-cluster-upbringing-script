@@ -1,0 +1,13 @@
+---
+zpm_install_dir: "{{ target_dir | default('/opt/pipecat/modules/zero-point-modulator') }}"
+zpm_state_dir: /opt/zpm/state
+zpm_state_file: /opt/zpm/state/state.sqlite3
+zpm_config_dir: /opt/zpm/config
+zpm_provider_config: /opt/zpm/config/provider.json
+zpm_reconcile_interval: 10
+zpm_deployment_id: "llama-cluster-zpm"
+zpm_openjules_endpoint: "http://127.0.0.1:8000"
+zpm_token_ref: "OPENJULES_WORKER_TOKEN"
+zpm_max_workers: 8
+zpm_timeout_seconds: 15
+zpm_nomad_job_path: /opt/nomad/jobs/zpm.nomad

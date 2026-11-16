@@ -43,6 +43,25 @@
       when: node_tier in ['mid', 'core', 'high']
       tags:
         - polyphony
+    - role: openjules
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - openjules
+    - role: zero_point_modulator
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - zero_point_modulator
+        - zpm
+    - role: npcsh
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - npcsh
+        - swarm
+    - role: psychic
+      when: node_tier in ['mid', 'core', 'high']
+      tags:
+        - psychic
+        - developer_tools
     - role: pipecatapp
       when: node_tier in ['mid', 'core', 'high']
       tags:

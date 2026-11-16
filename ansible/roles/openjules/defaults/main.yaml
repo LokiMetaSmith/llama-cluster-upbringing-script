@@ -1,0 +1,11 @@
+---
+openjules_install_dir: "{{ target_dir | default('/opt/pipecat/modules/OpenJules') }}"
+openjules_port: 8000
+openjules_host: "0.0.0.0"
+openjules_log_level: "info"
+openjules_swarm_key: "{{ swarm_key | default('KEYSTONE-POLYPHONY-LOCAL') }}"
+openjules_docker_host: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
+openjules_polyphony_url: "{{ polyphony_url | default('http://127.0.0.1:8000') }}"
+openjules_llm_api_base: "{{ vllm_endpoint | default('http://127.0.0.1:8000/v1') }}"
+openjules_llm_model: "{{ default_coding_model | default('qwen2.5-coder-7b-instruct') }}"
+openjules_nomad_job_path: /opt/nomad/jobs/openjules.nomad

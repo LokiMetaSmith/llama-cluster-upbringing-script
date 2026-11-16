@@ -1,0 +1,46 @@
+# Shared cluster topology, thresholds, and safety guardrails for npcpy and npcsh
+forenpc: forenpc
+provider: openai-like
+model: "{{ env('LOCAL_COORDINATOR_MODEL', 'qwen2.5-32b-instruct') }}"
+api_url: "{{ env('LOCAL_INFERENCE_URL', 'http://127.0.0.1:8081/v1') }}"
+api_key: "{{ env('LOCAL_INFERENCE_KEY', 'sk-local-no-auth') }}"
+db_dir: "/var/tmp"
+
+endpoints:
+  llama_cpp: "{{ env('LLAMA_CPP_API_URL', 'http://127.0.0.1:8081/v1') }}"
+  vllm: "{{ env('VLLM_API_URL', 'http://127.0.0.1:8000/v1') }}"
+  ollama: "{{ env('OLLAMA_API_URL', 'http://127.0.0.1:11434/v1') }}"
+
+llama_server_flags: "-np 4 --cont-batching"
+
+thresholds:
+  kv_cache_usage_max: 0.85
+  memory_pressure_pct: 85
+  rpc_latency_ms_max: 150
+  thermal_throttle_c: 85
+  power_cap_watts: 350
+
+guardrails:
+  local_only: true
+  disable_incognide_gui: true
+  disable_external_saas: true
+  enforce_tls_verification: true
+  allowed_actions:
+    - drain
+    - restart_worker
+    - rebalance_shards
+    - ignore
+
+worker_specialties:
+  - name: memory_analyst
+    focus: "Focus on memory pressure, VRAM allocation, and KV-cache slot contention."
+    model: "{{ env('LOCAL_WORKER_MODEL', 'llama-3.1-8b-instruct') }}"
+    api_url: "{{ env('MEMORY_WORKER_API_URL', 'http://127.0.0.1:8081/v1') }}"
+  - name: network_analyst
+    focus: "Focus on network throughput, Tailscale mesh packet loss, and ggml-rpc latency."
+    model: "{{ env('LOCAL_WORKER_MODEL', 'llama-3.1-8b-instruct') }}"
+    api_url: "{{ env('NETWORK_WORKER_API_URL', 'http://127.0.0.1:8081/v1') }}"
+  - name: thermal_analyst
+    focus: "Focus on CPU/GPU thermals, fan curves, and node power draw."
+    model: "{{ env('LOCAL_WORKER_MODEL', 'llama-3.1-8b-instruct') }}"
+    api_url: "{{ env('THERMAL_WORKER_API_URL', 'http://127.0.0.1:8081/v1') }}"

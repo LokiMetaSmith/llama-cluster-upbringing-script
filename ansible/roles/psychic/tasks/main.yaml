@@ -1,0 +1,89 @@
+- name: Ensure node-local psychic data directory exists
+  ansible.builtin.file:
+    path: "{{ psychic_local_data_root }}/psychic_{{ psychic_user }}"
+    state: directory
+    owner: "{{ psychic_user }}"
+    group: "{{ psychic_user }}"
+    mode: "0750"
+  become: yes
+
+- name: Ensure user XDG data parent directory exists
+  ansible.builtin.file:
+    path: "/home/{{ psychic_user }}/.local/share"
+    state: directory
+    owner: "{{ psychic_user }}"
+    group: "{{ psychic_user }}"
+    mode: "0755"
+  become: yes
+
+- name: Check existing ~/.local/share/psychic path
+  ansible.builtin.stat:
+    path: "/home/{{ psychic_user }}/.local/share/psychic"
+  register: psychic_xdg_stat
+  become: yes
+
+- name: Symlink ~/.local/share/psychic to node-local storage to prevent NFS SQLite contention
+  ansible.builtin.file:
+    src: "{{ psychic_local_data_root }}/psychic_{{ psychic_user }}"
+    dest: "/home/{{ psychic_user }}/.local/share/psychic"
+    state: link
+    owner: "{{ psychic_user }}"
+    group: "{{ psychic_user }}"
+    force: yes
+  become: yes
+  when: not psychic_xdg_stat.stat.exists or psychic_xdg_stat.stat.islnk
+
+- name: Check if prebuilt psychic binary is already installed
+  ansible.builtin.stat:
+    path: "{{ psychic_install_dir }}/psychic"
+  register: psychic_bin_stat
+
+- name: Download and install prebuilt psychic binary via official installer
+  ansible.builtin.shell: |
+    set -euo pipefail
+    INSTALLER_TMP="$(mktemp /tmp/psychic-installer.XXXXXX.sh)"
+    trap 'rm -f "$INSTALLER_TMP"' EXIT
+    curl --proto '=https' --tlsv1.2 -LsSf "{{ psychic_installer_url }}" -o "$INSTALLER_TMP"
+    sh "$INSTALLER_TMP"
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "/home/{{ psychic_user }}"
+  become: yes
+  become_user: "{{ psychic_user }}"
+  register: psychic_install_result
+  ignore_errors: yes
+  when: not psychic_bin_stat.stat.exists
+
+- name: Check if ~/.local/bin/psychic was installed
+  ansible.builtin.stat:
+    path: "/home/{{ psychic_user }}/.local/bin/psychic"
+  register: psychic_user_bin_stat
+
+- name: Install psychic binary globally to {{ psychic_install_dir }}/psychic
+  ansible.builtin.copy:
+    src: "/home/{{ psychic_user }}/.local/bin/psychic"
+    dest: "{{ psychic_install_dir }}/psychic"
+    mode: "0755"
+    remote_src: yes
+  become: yes
+  when: not psychic_bin_stat.stat.exists and psychic_user_bin_stat.stat.exists
+
+- name: Install global psychic profile hook in /etc/profile.d/psychic.sh
+  ansible.builtin.template:
+    src: psychic.sh.j2
+    dest: /etc/profile.d/psychic.sh
+    owner: root
+    group: root
+    mode: "0644"
+  become: yes
+
+- name: Ensure interactive non-login bash shells source /etc/profile.d/psychic.sh
+  ansible.builtin.lineinfile:
+    path: "/home/{{ psychic_user }}/.bashrc"
+    line: "[ -r /etc/profile.d/psychic.sh ] && . /etc/profile.d/psychic.sh"
+    create: yes
+    owner: "{{ psychic_user }}"
+    group: "{{ psychic_user }}"
+    mode: "0644"
+  become: yes

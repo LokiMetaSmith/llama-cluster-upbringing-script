@@ -1,3 +1,15 @@
 [submodule "modules/keystone-polyphony"]
 	path = modules/keystone-polyphony
 	url = https://github.com/LokiMetaSmith/keystone-polyphony.git
+[submodule "modules/OpenJules"]
+	path = modules/OpenJules
+	url = https://github.com/LokiMetaSmith/OpenJules.git
+[submodule "modules/zero-point-modulator"]
+	path = modules/zero-point-modulator
+	url = https://github.com/niklas-olsson/zero-point-modulator.git
+[submodule "ansible/roles/miniray/files/src"]
+	path = ansible/roles/miniray/files/src
+	url = https://github.com/richard-to/miniray.git
+[submodule "pipecatapp/miniray"]
+	path = pipecatapp/miniray
+	url = https://github.com/richard-to/miniray.git

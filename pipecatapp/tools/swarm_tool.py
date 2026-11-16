@@ -31,7 +31,7 @@ class SwarmTool:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "description": "The action to perform. Available: spawn_workers, wait_for_results, kill_worker, send_message, receive_messages"
+                            "description": "The action to perform. Available: spawn_workers, wait_for_results, kill_worker, send_message, receive_messages, run_swarm_cycle, dispatch_jinx, collect_metrics, recent_operator_files"
                         },
                         "kwargs": {
                             "type": "object",
@@ -54,6 +54,9 @@ class SwarmTool:
             return getattr(self, "send_message")(**kwargs.get("kwargs", kwargs))
         if action == "receive_messages":
             return getattr(self, "receive_messages")(**kwargs.get("kwargs", kwargs))
+        if action in ("run_swarm_cycle", "dispatch_jinx", "collect_metrics", "recent_operator_files"):
+            from pipecatapp.tools.npc_swarm_tool import NPCSwarmTool
+            return NPCSwarmTool().execute(action, **kwargs)
         else:
             return f"Unknown action: {action}"
 
@@ -169,7 +172,7 @@ class SwarmTool:
         if not self.memory_client:
             return json.dumps({"error": "Memory client not initialized in SwarmTool. Cannot wait for results."})
 
-        results = {}
+        results: Dict[str, Any] = {}
         start_time = time.time()
 
         self.logger.info(f"Waiting for results from tasks: {task_ids}")

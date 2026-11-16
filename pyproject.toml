@@ -7,6 +7,7 @@ dependencies = [
     "prometheus-client>=0.19.0",
     "mini-swe-agent>=0.1.0",
     "pydantic>=2.13.5",
+    "npcpy>=1.0.0",
 ]
 
 [tool.vulture]

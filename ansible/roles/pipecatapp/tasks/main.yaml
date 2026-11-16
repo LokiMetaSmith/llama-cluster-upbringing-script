@@ -184,6 +184,14 @@
   tags:
     - deploy_app
 
+- name: Synchronize shared npc_team declarative configuration
+  ansible.posix.synchronize:
+    src: "{{ project_root }}/npc_team/"
+    dest: "{{ pipecat_app_dir }}/npc_team/"
+  become: yes
+  tags:
+    - deploy_app
+
 - name: Ensure uv is installed globally for pipecatapp deployment
   ansible.builtin.pip:
     name: uv

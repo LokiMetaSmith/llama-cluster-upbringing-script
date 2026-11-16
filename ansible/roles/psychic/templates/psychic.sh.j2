@@ -1,0 +1,18 @@
+# Managed by Ansible role: psychic
+export PSYCHIC_DATA_DIR="{{ psychic_local_data_root | default('/var/tmp') }}/psychic_${USER:-operator}"
+mkdir -p "${PSYCHIC_DATA_DIR}" "${HOME}/.local/share" 2>/dev/null || true
+if [ ! -L "${HOME}/.local/share/psychic" ] && [ ! -e "${HOME}/.local/share/psychic" ]; then
+    ln -s "${PSYCHIC_DATA_DIR}" "${HOME}/.local/share/psychic" 2>/dev/null || true
+fi
+
+case "$-" in
+    *i*)
+        if [ -t 0 ] && command -v psychic >/dev/null 2>&1; then
+            if [ -n "${ZSH_VERSION:-}" ]; then
+                eval "$(psychic zsh)"
+            elif [ -n "${BASH_VERSION:-}" ]; then
+                eval "$(psychic bash)"
+            fi
+        fi
+        ;;
+esac

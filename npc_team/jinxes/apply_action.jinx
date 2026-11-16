@@ -1,0 +1,44 @@
+jinx_name: apply_action
+description: "Apply a validated cluster remediation action (drain, restart_worker, rebalance_shards, ignore) on the local worker node."
+inputs:
+  - action: "ignore"
+  - target_service: "llama-worker"
+  - priority: 3
+steps:
+  - name: execute_remediation
+    engine: bash
+    code: |
+      set -euo pipefail
+      ACTION="{{ action }}"
+      TARGET_SERVICE="{{ target_service }}"
+      PRIORITY="{{ priority }}"
+      case "$ACTION" in
+        ignore)
+          echo "no-op"
+          exit 0
+          ;;
+        drain|restart_worker|rebalance_shards)
+          echo "npcsh-action status=dispatched action=${ACTION} target=${TARGET_SERVICE} priority=${PRIORITY}"
+          if [ "${NPCSH_DRY_RUN:-0}" = "1" ]; then
+            echo "dry-run: skipped system command for ${TARGET_SERVICE}"
+            exit 0
+          fi
+          if command -v systemctl >/dev/null 2>&1 && systemctl cat "${TARGET_SERVICE}.service" >/dev/null 2>&1; then
+            if [ "$ACTION" = "restart_worker" ]; then
+              sudo -n systemctl restart "${TARGET_SERVICE}.service" || echo "deferred: requires privilege for ${TARGET_SERVICE}"
+            elif [ "$ACTION" = "drain" ]; then
+              sudo -n systemctl stop "${TARGET_SERVICE}.service" || echo "deferred: requires privilege for ${TARGET_SERVICE}"
+            else
+              echo "rebalance_shards signaled for ${TARGET_SERVICE}"
+            fi
+          elif command -v nomad >/dev/null 2>&1 && [ -n "${NOMAD_ALLOC_ID:-}" ]; then
+            echo "nomad-node-action: ${ACTION} on ${TARGET_SERVICE}"
+          else
+            echo "node-local-hook: ${ACTION} recorded for ${TARGET_SERVICE}"
+          fi
+          ;;
+        *)
+          echo "error: unsupported action '${ACTION}'" >&2
+          exit 2
+          ;;
+      esac

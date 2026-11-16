@@ -1,0 +1,47 @@
+---
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/jobs
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Ensure ZPM state and config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  loop:
+    - "{{ zpm_state_dir }}"
+    - "{{ zpm_config_dir }}"
+
+- name: Create ZPM provider configuration file
+  ansible.builtin.copy:
+    dest: "{{ zpm_provider_config }}"
+    content: |
+      {
+        "schema_version": 1,
+        "endpoint": "{{ zpm_openjules_endpoint }}",
+        "token_ref": "env:{{ zpm_token_ref }}",
+        "max_workers": {{ zpm_max_workers }},
+        "timeout_seconds": {{ zpm_timeout_seconds }}
+      }
+    owner: root
+    group: root
+    mode: '0640'
+  become: yes
+
+- name: Create ZPM Nomad job file
+  ansible.builtin.template:
+    src: zpm.nomad.j2
+    dest: "{{ zpm_nomad_job_path | default('/opt/nomad/jobs/zpm.nomad') }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run ZPM Job

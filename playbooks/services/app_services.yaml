@@ -135,6 +135,7 @@
         - e2a
         - traceway
         - celld
+        - npcsh
         - pipecatapp
       loop_control:
         loop_var: role_name
@@ -153,6 +154,7 @@
         - e2a
         - traceway
         - celld
+        - npcsh
         - pipecatapp
 
     - name: Run Paddler Stack

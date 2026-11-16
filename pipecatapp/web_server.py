@@ -1862,7 +1862,7 @@ async def get_web_uis(
             )
             if any(service_name.startswith(p) for p in internal_prefixes) or service_name in [
                 "nomad", "consul", "grafana", "mqtt", "mqtts", "archivist-api", "world-model-api",
-                "polyphony-api", "opencode-api", "tap-orchestrator", "traceway", "smol-agent-server"
+                "polyphony-api", "openjules-api", "zpm-controller", "opencode-api", "tap-orchestrator", "traceway", "smol-agent-server"
             ] or "pipecat" in service_name:
                 return None
 

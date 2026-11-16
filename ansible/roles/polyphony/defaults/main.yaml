@@ -1,0 +1,6 @@
+---
+polyphony_install_dir: "{{ target_dir | default('/opt/pipecat/modules/keystone-polyphony') }}"
+polyphony_swarm_key: "{{ swarm_key | default('KEYSTONE-POLYPHONY-LOCAL') }}"
+polyphony_ducky_api_key: "{{ openai_api_key | default('') }}"
+polyphony_ducky_model: "gpt-4o"
+polyphony_nomad_job_path: /opt/nomad/jobs/polyphony.nomad

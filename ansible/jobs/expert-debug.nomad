@@ -48,6 +48,7 @@ echo "Attempting to start llama-server with hardcoded model: Llama-3-8B-Instruct
   --model "/opt/nomad/models/llm/Llama-3-8B-Instruct.gguf" \
   --host 0.0.0.0 \
   --port {{ '{{' }} env "NOMAD_PORT_http" {{ '}}' }} \
+  -np 4 --cont-batching \
   --n-gpu-layers 999 \
   --flash-attn auto \
   --cache-prompt \

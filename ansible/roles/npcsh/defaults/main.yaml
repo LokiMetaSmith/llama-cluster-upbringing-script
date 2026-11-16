@@ -1,0 +1,7 @@
+npcsh_user: "cluster"
+npcsh_group: "cluster"
+npcsh_socket_dir: "/run/npcsh"
+npcsh_socket_path: "/run/npcsh/daemon.sock"
+npcsh_team_dir: "/opt/pipecatapp/npc_team"
+npcsh_venv_dir: "/opt/pipecatapp/venv"
+local_inference_key: "sk-local-no-auth"

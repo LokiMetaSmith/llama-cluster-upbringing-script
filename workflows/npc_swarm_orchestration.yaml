@@ -1,0 +1,29 @@
+name: npc_swarm_orchestration
+description: Two-tier hybrid npcpy control-plane orchestration and npcsh/npcrs .jinx node execution workflow without Incognide Electron GUI or external SaaS dependencies.
+
+global_mission: Evaluate cluster telemetry with NPCArray worker debate, synthesize a ClusterActionPlan via forenpc Team orchestration, and execute node-level .jinx remediations over persistent npcsh-daemon sockets.
+
+nodes:
+  - id: collect_worker_telemetry
+    type: ToolNode
+    config:
+      tool_name: npc_swarm
+      action: collect_metrics
+      node_host: "worker-01"
+      probe_scope: "all"
+
+  - id: run_npcpy_map_reduce
+    type: ToolNode
+    config:
+      tool_name: npc_swarm
+      action: run_swarm_cycle
+      telemetry_snapshot: "node=worker-01 scope=all memory_pressure=ok kv_cache=nominal"
+
+  - id: dispatch_node_remediation
+    type: ToolNode
+    config:
+      tool_name: npc_swarm
+      action: dispatch_jinx
+      node_host: "worker-01"
+      remediation_action: "ignore"
+      priority: 5

@@ -1,0 +1,60 @@
+job "zero-point-modulator" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "zpm-controller" {
+    count = 1
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "10s"
+      healthy_deadline  = "15m"
+      progress_deadline = "20m"
+      auto_revert       = true
+      auto_promote      = false
+      canary            = 0
+    }
+
+    task "zpm-reconciler" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sh"
+        args    = [
+          "-c",
+          "cd {{ zpm_install_dir }} && exec python3 -m zpm --state {{ zpm_state_file }} --deployment-id {{ zpm_deployment_id }} reconcile --provider {{ zpm_provider_config }} --watch --interval {{ zpm_reconcile_interval }}"
+        ]
+      }
+
+      env {
+        ZPM_STATE_FILE       = "{{ zpm_state_file }}"
+        ZPM_DEPLOYMENT_ID    = "{{ zpm_deployment_id }}"
+        OPENJULES_ENDPOINT   = "{{ zpm_openjules_endpoint }}"
+      }
+
+      resources {
+        cpu    = 1000
+        memory = 1024
+      }
+    }
+
+    service {
+      name = "zpm-controller"
+      tags = ["zpm", "reconciler", "distributed-coding", "llm-controller"]
+    }
+  }
+}

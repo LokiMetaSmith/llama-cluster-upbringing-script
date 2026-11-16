@@ -1,0 +1,84 @@
+job "openjules" {
+  datacenters = {{ nomad_datacenters | default(['dc1']) | to_json }}
+  type        = "service"
+
+  group "openjules" {
+    count = 1
+
+    restart {
+      attempts = 5
+      interval = "5m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    reschedule {
+      delay          = "30s"
+      delay_function = "exponential"
+      max_delay      = "10m"
+      unlimited      = true
+    }
+
+    update {
+      max_parallel      = 1
+      min_healthy_time  = "10s"
+      healthy_deadline  = "15m"
+      progress_deadline = "20m"
+      auto_revert       = true
+      auto_promote      = false
+      canary            = 0
+    }
+
+    network {
+      port "http" {
+        to = {{ openjules_port }}
+      }
+    }
+
+    task "openjules-daemon" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sh"
+        args    = [
+          "-c",
+          "cd {{ openjules_install_dir }} && exec python3 -m uvicorn src.api.webhook:app --host {{ openjules_host }} --port ${NOMAD_PORT_http}"
+        ]
+      }
+
+      env {
+        PORT                = "${NOMAD_PORT_http}"
+        SWARM_KEY           = "{{ openjules_swarm_key }}"
+        POLYPHONY_URL       = "{{ openjules_polyphony_url }}"
+        DOCKER_HOST         = "{{ openjules_docker_host }}"
+        OPENAI_API_BASE     = "{{ openjules_llm_api_base }}"
+        DEFAULT_MODEL       = "{{ openjules_llm_model }}"
+        LOG_LEVEL           = "{{ openjules_log_level }}"
+      }
+
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
+    }
+
+    service {
+      name = "openjules-api"
+      port = "http"
+      tags = ["openjules", "api", "coding-agent", "distributed-swe"]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "20s"
+        timeout  = "10s"
+
+        check_restart {
+          limit           = 3
+          grace           = "90s"
+          ignore_warnings = false
+        }
+      }
+    }
+  }
+}

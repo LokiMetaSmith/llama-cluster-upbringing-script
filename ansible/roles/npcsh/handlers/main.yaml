@@ -1,0 +1,6 @@
+- name: Reload and restart npcsh-daemon
+  ansible.builtin.systemd:
+    name: npcsh-daemon
+    daemon_reload: yes
+    state: restarted
+  become: yes

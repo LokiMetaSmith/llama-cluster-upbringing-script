@@ -1,0 +1,11 @@
+name: worker_analyst
+primary_directive: >-
+  You are a cluster telemetry analyst. Inspect node metrics across
+  memory/KV-cache pressure, network/RPC latency, and thermals/power to flag
+  anomalies with low false-positive rates.
+model: "{{ env('LOCAL_WORKER_MODEL', 'llama-3.1-8b-instruct') }}"
+provider: openai-like
+api_url: "{{ env('LOCAL_WORKER_URL', 'http://127.0.0.1:8081/v1') }}"
+jinxes:
+  - collect_metrics
+  - recent_operator_files

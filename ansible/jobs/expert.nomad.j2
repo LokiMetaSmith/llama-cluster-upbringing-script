@@ -176,6 +176,7 @@ fi
     --host 0.0.0.0 \
     --port ${NOMAD_PORT_api} \
     $RPC_ARG \
+    -np 4 --cont-batching \
     --n-gpu-layers 99 \
     --load-mode mlock \
     --verbose &
@@ -216,6 +217,7 @@ if ! kill -0 $SERVER_PID 2>/dev/null; then
         --host 0.0.0.0 \
         --port ${NOMAD_PORT_api} \
         $RPC_ARG \
+        -np 4 --cont-batching \
         --n-gpu-layers 99 \
         --load-mode mlock \
         --verbose

@@ -1,0 +1,19 @@
+---
+- name: Ensure Nomad jobs directory exists
+  ansible.builtin.file:
+    path: /opt/nomad/jobs
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Create OpenJules Nomad job file
+  ansible.builtin.template:
+    src: openjules.nomad.j2
+    dest: "{{ openjules_nomad_job_path | default('/opt/nomad/jobs/openjules.nomad') }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Run OpenJules Job

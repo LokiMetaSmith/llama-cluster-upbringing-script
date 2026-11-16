@@ -1,0 +1,12 @@
+name: forenpc
+primary_directive: >-
+  You are the cluster orchestration coordinator. Synthesize worker telemetry
+  reports, delegate targeted root-cause checks to specialists, and determine
+  minimal-disruption remediation actions.
+model: "{{ env('LOCAL_COORDINATOR_MODEL', 'qwen2.5-32b-instruct') }}"
+provider: openai-like
+api_url: "{{ env('LOCAL_INFERENCE_URL', 'http://127.0.0.1:8081/v1') }}"
+jinxes:
+  - collect_metrics
+  - apply_action
+  - recent_operator_files

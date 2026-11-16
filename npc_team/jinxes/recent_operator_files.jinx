@@ -1,0 +1,116 @@
+jinx_name: recent_operator_files
+description: "Read-only SQLite probe against psychic's events.db to surface files and directories recently opened or visited by human operators."
+inputs:
+  - limit: 10
+  - db_path: ""
+steps:
+  - name: query_psychic_sqlite
+    engine: bash
+    code: |
+      set -euo pipefail
+      PSYCHIC_JINX_LIMIT="{{ limit }}" PSYCHIC_JINX_DB_PATH="{{ db_path }}" python3 - <<'PY'
+      import json
+      import os
+      import sqlite3
+      import urllib.parse
+
+      limit = max(1, min(200, int(os.environ.get("PSYCHIC_JINX_LIMIT", "10") or "10")))
+      explicit_db = os.environ.get("PSYCHIC_JINX_DB_PATH", "").strip()
+      user = os.environ.get("USER", "pipecatapp")
+      candidates = [
+          explicit_db,
+          os.path.join(os.environ.get("PSYCHIC_DATA_DIR", ""), "events.db") if os.environ.get("PSYCHIC_DATA_DIR") else "",
+          f"/var/tmp/psychic_{user}/events.db",
+          os.path.expanduser("~/.local/share/psychic/events.db"),
+      ]
+      db_file = next((os.path.realpath(p) for p in candidates if p and os.path.isfile(os.path.expanduser(p))), None)
+      if not db_file:
+          print(json.dumps({"status": "ok", "db_path": None, "recent_files": []}))
+          raise SystemExit(0)
+
+      uri = f"file:{urllib.parse.quote(db_file)}?mode=ro"
+      conn = sqlite3.connect(uri, uri=True, timeout=5.0)
+      try:
+          hidden = []
+          try:
+              hidden = [row[0].rstrip("/") for row in conn.execute("SELECT path FROM hidden_prefixes").fetchall() if row[0]]
+          except sqlite3.OperationalError:
+              hidden = []
+
+          def _is_hidden(p: str) -> bool:
+              return any(p == pref or p.startswith(pref + "/") for pref in hidden)
+
+          results = []
+          rows = conn.execute(
+              """
+              WITH ranked AS (
+                  SELECT
+                      full_path,
+                      timestamp,
+                      action,
+                      query,
+                      episode_queries,
+                      is_dir,
+                      COUNT(*) OVER (PARTITION BY full_path) AS interactions,
+                      ROW_NUMBER() OVER (PARTITION BY full_path ORDER BY timestamp DESC, id DESC) AS rn
+                  FROM events
+                  WHERE action IN ('click', 'jump', 'startup_visit', 'scroll')
+                    AND full_path IS NOT NULL
+                    AND full_path != ''
+              )
+              SELECT full_path, timestamp, interactions, action, query, episode_queries, is_dir
+              FROM ranked
+              WHERE rn = 1
+              ORDER BY timestamp DESC
+              LIMIT ?
+              """,
+              (limit * 3,),
+          ).fetchall()
+          for row in rows:
+              if _is_hidden(row[0]):
+                  continue
+              results.append({
+                  "full_path": row[0],
+                  "last_timestamp": row[1],
+                  "interactions": row[2],
+                  "action": row[3],
+                  "last_query": row[4],
+                  "episode_queries": row[5],
+                  "is_dir": bool(row[6]) if row[6] is not None else None,
+              })
+              if len(results) >= limit:
+                  break
+
+          if not results:
+              try:
+                  imp_rows = conn.execute(
+                      """
+                      SELECT full_path, last_used, uses, sources
+                      FROM imported_paths
+                      WHERE full_path IS NOT NULL AND full_path != ''
+                      ORDER BY last_used DESC
+                      LIMIT ?
+                      """,
+                      (limit * 3,),
+                  ).fetchall()
+                  for row in imp_rows:
+                      if _is_hidden(row[0]):
+                          continue
+                      results.append({
+                          "full_path": row[0],
+                          "last_timestamp": row[1],
+                          "interactions": row[2],
+                          "action": f"imported:{row[3]}",
+                          "last_query": "",
+                          "episode_queries": None,
+                          "is_dir": None,
+                      })
+                      if len(results) >= limit:
+                          break
+              except sqlite3.OperationalError:
+                  pass
+      finally:
+          conn.close()
+
+      print(json.dumps({"status": "ok", "db_path": db_file, "recent_files": results}))
+      PY

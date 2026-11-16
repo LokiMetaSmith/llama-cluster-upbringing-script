@@ -1,0 +1,4 @@
+psychic_install_dir: "/usr/local/bin"
+psychic_installer_url: "https://github.com/kshitijl/psychic/releases/latest/download/psychic-cli-installer.sh"
+psychic_local_data_root: "/var/tmp"
+psychic_user: "{{ target_user | default('pipecatapp') }}"

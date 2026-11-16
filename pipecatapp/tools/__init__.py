@@ -91,6 +91,10 @@ __all__ = [
     "KeylessWebResearcherTool",
     "ProcessInvestigatorTool",
     "TOTPTool",
+    "OpenJulesTool",
+    "ZeroPointModulatorTool",
+    "ZPMTool",
+    "NPCSwarmTool",
 ]
 
 _module_lookup = {
@@ -184,6 +188,10 @@ _module_lookup = {
     "KeylessWebResearcherTool": "keyless_web_researcher_tool",
     "ProcessInvestigatorTool": "process_investigator_tool",
     "TOTPTool": "totp_tool",
+    "OpenJulesTool": "openjules_tool",
+    "ZeroPointModulatorTool": "zpm_tool",
+    "ZPMTool": "zpm_tool",
+    "NPCSwarmTool": "npc_swarm_tool",
 }
 
 

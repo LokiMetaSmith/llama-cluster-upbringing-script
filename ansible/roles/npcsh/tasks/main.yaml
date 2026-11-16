@@ -1,0 +1,126 @@
+- name: Ensure npcsh service group exists
+  ansible.builtin.group:
+    name: "{{ npcsh_group }}"
+    state: present
+  become: yes
+
+- name: Ensure npcsh service user exists
+  ansible.builtin.user:
+    name: "{{ npcsh_user }}"
+    group: "{{ npcsh_group }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  become: yes
+
+- name: Ensure runtime socket and cache directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  become: yes
+  loop:
+    - path: "{{ npcsh_socket_dir }}"
+      owner: "{{ npcsh_user }}"
+      group: "{{ npcsh_group }}"
+      mode: "0755"
+    - path: "/home/{{ npcsh_user }}/.npcsh"
+      owner: "{{ npcsh_user }}"
+      group: "{{ npcsh_group }}"
+      mode: "0755"
+    - path: "/var/tmp/ansible_pip_build/uv_cache"
+      owner: root
+      group: root
+      mode: "0777"
+    - path: "{{ npcsh_team_dir }}"
+      owner: "{{ target_user | default('pipecatapp') }}"
+      group: "{{ target_user | default('pipecatapp') }}"
+      mode: "0755"
+
+- name: Ensure target_user ~/.npcsh directory exists
+  ansible.builtin.file:
+    path: "/home/{{ target_user | default('pipecatapp') }}/.npcsh"
+    state: directory
+    owner: "{{ target_user | default('pipecatapp') }}"
+    group: "{{ target_user | default('pipecatapp') }}"
+    mode: "0755"
+  become: yes
+
+- name: Synchronize shared declarative npc_team configuration
+  ansible.posix.synchronize:
+    src: "{{ project_root }}/npc_team/"
+    dest: "{{ npcsh_team_dir }}/"
+  become: yes
+
+- name: Install npcpy, npcsh, and pydantic via uv
+  ansible.builtin.command:
+    cmd: "uv pip install npcpy npcsh pydantic"
+  environment:
+    VIRTUAL_ENV: "{{ npcsh_venv_dir }}"
+    UV_CACHE_DIR: "/var/tmp/ansible_pip_build/uv_cache"
+  become: yes
+  ignore_errors: yes
+
+- name: Ensure /opt/pipecatapp/npcsh_daemon.py is deployed
+  ansible.builtin.copy:
+    src: "{{ project_root }}/pipecatapp/npcsh_daemon.py"
+    dest: "/opt/pipecatapp/npcsh_daemon.py"
+    mode: "0755"
+  become: yes
+
+- name: Install /usr/local/bin/npcsh-daemon entrypoint
+  ansible.builtin.copy:
+    dest: /usr/local/bin/npcsh-daemon
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [ -x "{{ npcsh_venv_dir }}/bin/npcsh-daemon" ]; then
+        exec "{{ npcsh_venv_dir }}/bin/npcsh-daemon" "$@"
+      fi
+      exec "{{ npcsh_venv_dir }}/bin/python3" /opt/pipecatapp/npcsh_daemon.py --daemon "$@"
+  become: yes
+
+- name: Install /usr/local/bin/npc CLI symlink/wrapper
+  ansible.builtin.copy:
+    dest: /usr/local/bin/npc
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [ -x "{{ npcsh_venv_dir }}/bin/npc" ]; then
+        exec "{{ npcsh_venv_dir }}/bin/npc" "$@"
+      fi
+      exec "{{ npcsh_venv_dir }}/bin/python3" /opt/pipecatapp/npcsh_daemon.py "$@"
+  become: yes
+
+- name: Symlink ~/.npcsh/daemon.sock to persistent npcsh daemon socket
+  ansible.builtin.file:
+    src: "{{ npcsh_socket_path }}"
+    dest: "{{ item }}/daemon.sock"
+    state: link
+    force: yes
+  become: yes
+  loop:
+    - "/home/{{ npcsh_user }}/.npcsh"
+    - "/home/{{ target_user | default('pipecatapp') }}/.npcsh"
+
+- name: Install npcsh-daemon systemd service
+  ansible.builtin.template:
+    src: npcsh-daemon.service.j2
+    dest: /etc/systemd/system/npcsh-daemon.service
+    owner: root
+    group: root
+    mode: "0644"
+  become: yes
+  notify: Reload and restart npcsh-daemon
+
+- name: Enable and start npcsh-daemon systemd service
+  ansible.builtin.systemd:
+    name: npcsh-daemon
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes

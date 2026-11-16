@@ -1,0 +1,14 @@
+[Unit]
+Description=Persistent npcsh / npcrs Agent Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=cluster
+Environment="LOCAL_INFERENCE_KEY=sk-local-no-auth"
+ExecStart=/usr/local/bin/npcsh-daemon --socket /run/npcsh/daemon.sock
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,28 @@
+jinx_name: collect_metrics
+description: "Collect local node memory/KV-cache, network/RPC latency, and thermal/power telemetry over Unix pipes."
+inputs:
+  - probe_scope: "all"
+  - llama_metrics_url: "http://127.0.0.1:8081/metrics"
+steps:
+  - name: probe_node_telemetry
+    engine: bash
+    code: |
+      set -euo pipefail
+      SCOPE="{{ probe_scope }}"
+      METRICS_URL="{{ llama_metrics_url }}"
+      HOST_NAME=$(hostname -s 2>/dev/null || echo "unknown")
+      LOAD_AVG=$(awk '{print $1","$2","$3}' /proc/loadavg 2>/dev/null || echo "0,0,0")
+      MEM_LINE=$(free -m 2>/dev/null | awk 'NR==2{printf "total_mb=%s used_mb=%s avail_mb=%s", $2, $3, $7}' || echo "total_mb=0 used_mb=0 avail_mb=0")
+      THERMAL_C="unavailable"
+      if [ -r /sys/class/thermal/thermal_zone0/temp ]; then
+        RAW_T=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo "0")
+        THERMAL_C=$((RAW_T / 1000))
+      fi
+      LLAMA_SLOTS="offline"
+      if command -v curl >/dev/null 2>&1; then
+        if curl -sS --max-time 2 "$METRICS_URL" >/tmp/npc_llama_metrics.$$ 2>/dev/null; then
+          LLAMA_SLOTS=$(grep -E "llamacpp:requests_(processing|deferred)" /tmp/npc_llama_metrics.$$ 2>/dev/null | tr '\n' ';' || echo "online")
+          rm -f /tmp/npc_llama_metrics.$$
+        fi
+      fi
+      echo "node=${HOST_NAME} scope=${SCOPE} load=${LOAD_AVG} ${MEM_LINE} thermal_c=${THERMAL_C} llama_slots=${LLAMA_SLOTS:-online}"

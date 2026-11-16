@@ -50,6 +50,9 @@ import pipecatapp.tools.search_tool
 import pipecatapp.tools.shell_tool
 import pipecatapp.tools.spec_loader_tool
 import pipecatapp.tools.swarm_tool
+import pipecatapp.tools.npc_swarm_tool
+import pipecatapp.swarm_orchestrator
+import pipecatapp.npcsh_daemon
 import pipecatapp.tools.tap_service
 import pipecatapp.tools.update_litellm_tool
 import pipecatapp.tools.vr_tool
@@ -473,4 +476,7 @@ convert_to_tensor
 StringEndsWith
 asyncSetUp
 asyncTearDown
+NPCSwarmTool
+cluster_health
+actions
 foo

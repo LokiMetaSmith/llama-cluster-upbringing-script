@@ -41,6 +41,7 @@ TOOL_CLASS_MAP = {
     "PromptImproverTool": ("pipecatapp.tools.prompt_improver_tool", "PromptImproverTool"),
     "CouncilTool": ("pipecatapp.tools.council_tool", "CouncilTool"),
     "SwarmTool": ("pipecatapp.tools.swarm_tool", "SwarmTool"),
+    "NPCSwarmTool": ("pipecatapp.tools.npc_swarm_tool", "NPCSwarmTool"),
     "HolographicMemoryTool": ("pipecatapp.tools.holographic_memory_tool", "HolographicMemoryTool"),
     "SubstrateVisualizerTool": ("pipecatapp.tools.substrate_visualizer_tool", "SubstrateVisualizerTool"),
     "ProjectMapperTool": ("pipecatapp.tools.project_mapper_tool", "ProjectMapperTool"),
@@ -73,6 +74,8 @@ TOOL_CLASS_MAP = {
     "ScaleComputeTool": ("pipecatapp.tools.scale_compute_tool", "ScaleComputeTool"),
     "ClusterStatusTool": ("pipecatapp.tools.cluster_status_tool", "ClusterStatusTool"),
     "PolyphonyTool": ("pipecatapp.tools.polyphony_tool", "PolyphonyTool"),
+    "OpenJulesTool": ("pipecatapp.tools.openjules_tool", "OpenJulesTool"),
+    "ZeroPointModulatorTool": ("pipecatapp.tools.zpm_tool", "ZeroPointModulatorTool"),
     "SkillBuilderTool": ("pipecatapp.tools.skill_builder_tool", "SkillBuilderTool"),
     "DynamicSkillTool": ("pipecatapp.tools.dynamic_skill_tool", "DynamicSkillTool"),
     "ASTEditorTool": ("pipecatapp.tools.ast_editor_tool", "ASTEditorTool"),
@@ -212,6 +215,7 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
         tools["council"] = _safe_create("council", lambda: _get_cls("CouncilTool")(twin_service))
         tools["planner"] = _safe_create("planner", lambda: _get_cls("PlannerTool")(twin_service))
     tools["swarm"] = _safe_create("swarm", lambda: _get_cls("SwarmTool")())
+    tools["npc_swarm"] = _safe_create("npc_swarm", lambda: _get_cls("NPCSwarmTool")())
     tools["project_mapper"] = _safe_create("project_mapper", lambda: _get_cls("ProjectMapperTool")())
     tools["lightweight_project_mapper"] = _safe_create("lightweight_project_mapper", lambda: _get_cls("LightweightProjectMapperTool")())
     tools["schema_harness"] = _safe_create("schema_harness", lambda: _get_cls("SchemaHarnessTool")())
@@ -272,6 +276,9 @@ def create_tools(config: dict | None = None, twin_service=None, runner=None, age
     tools["scale_compute"] = _safe_create("scale_compute", lambda: _get_cls("ScaleComputeTool")())
     tools["cluster_status"] = _safe_create("cluster_status", lambda: _get_cls("ClusterStatusTool")())
     tools["polyphony"] = _safe_create("polyphony", lambda: _get_cls("PolyphonyTool")())
+    tools["openjules"] = _safe_create("openjules", lambda: _get_cls("OpenJulesTool")())
+    tools["zpm"] = _safe_create("zpm", lambda: _get_cls("ZeroPointModulatorTool")())
+    tools["zero_point_modulator"] = tools["zpm"]
     tools["skill_builder"] = _safe_create("skill_builder", lambda: _get_cls("SkillBuilderTool")())
     tools["ast_editor"] = _safe_create("ast_editor", lambda: _get_cls("ASTEditorTool")(root_dir="/opt/pipecatapp"))
     tools["code_graph"] = _safe_create("code_graph", lambda: _get_cls("CodeGraphTool")(root_dir="/opt/pipecatapp"))
