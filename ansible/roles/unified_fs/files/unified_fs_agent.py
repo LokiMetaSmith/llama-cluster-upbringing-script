@@ -8,7 +8,10 @@ import json
 import logging
 import base64
 import requests
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+try:
+    from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+except ImportError:
+    from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
 from threading import Lock
 
 # Configure logging

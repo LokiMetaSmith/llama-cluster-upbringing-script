@@ -15,10 +15,17 @@
     name: fusepy
     executable: pip3
     state: present
+    extra_args: "--break-system-packages"
 
 - name: Create mount directory
   file:
     path: "{{ unified_fs_mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: Create root storage directory
+  file:
+    path: "{{ unified_fs_root_storage }}"
     state: directory
     mode: '0755'
 

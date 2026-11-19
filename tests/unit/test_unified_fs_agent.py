@@ -60,5 +60,12 @@ class TestUnifiedFSAgent(unittest.TestCase):
         self.assertIn('memory', root_dirs)
         self.assertIn('fs', root_dirs)
 
+    def test_fusepy_fallback_import(self):
+        import importlib
+        with patch.dict('sys.modules', {'fuse': None, 'fusepy': mock_fuse}):
+            # Verify reloading or importing succeeds with fusepy
+            import unified_fs_agent as ufs_mod
+            self.assertTrue(hasattr(ufs_mod, 'FUSE'))
+
 if __name__ == '__main__':
     unittest.main()
