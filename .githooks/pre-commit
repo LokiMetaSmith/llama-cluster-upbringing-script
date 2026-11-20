@@ -93,24 +93,37 @@ if [ -n "$DIFF" ]; then
         "max_tokens": 10
       }' | grep -o '"content":"[^"]*' | cut -d'"' -f4 | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
 
-    BUMP_TYPE=$LLM_RESPONSE
+    if [ -n "$BUMP_TYPE" ]; then
+        BUMP_TYPE=$(echo "$BUMP_TYPE" | tr '[:lower:]' '[:upper:]')
+    fi
+
+    if [[ "$BUMP_TYPE" != "MAJOR" && "$BUMP_TYPE" != "MINOR" && "$BUMP_TYPE" != "PATCH" ]]; then
+        BUMP_TYPE=$LLM_RESPONSE
+    fi
 
     # Validate LLM response, fallback to user input if it failed or hallucinated
     if [[ "$BUMP_TYPE" != "MAJOR" && "$BUMP_TYPE" != "MINOR" && "$BUMP_TYPE" != "PATCH" ]]; then
         echo "⚠️ LLM determination failed or was ambiguous (Response: '$LLM_RESPONSE')."
 
-        # Prompt the user interactively (redirecting stdin from /dev/tty since git hooks close it)
-        echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty
-        read USER_INPUT < /dev/tty
-        while true; do
-            USER_INPUT=$(echo "$USER_INPUT" | tr '[:lower:]' '[:upper:]')
-            if [[ "$USER_INPUT" == "MAJOR" || "$USER_INPUT" == "MINOR" || "$USER_INPUT" == "PATCH" ]]; then
-                BUMP_TYPE=$USER_INPUT
-                break
-            fi
-            echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty
-            read USER_INPUT < /dev/tty
-        done
+        if ! (exec < /dev/tty) 2>/dev/null; then
+            echo "Non-interactive environment detected; defaulting version bump to PATCH."
+            BUMP_TYPE="PATCH"
+        else
+            # Prompt the user interactively (redirecting stdin from /dev/tty since git hooks close it)
+            echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty 2>/dev/null || true
+            while true; do
+                if ! read -r USER_INPUT < /dev/tty 2>/dev/null; then
+                    BUMP_TYPE="PATCH"
+                    break
+                fi
+                USER_INPUT=$(echo "$USER_INPUT" | tr '[:lower:]' '[:upper:]')
+                if [[ "$USER_INPUT" == "MAJOR" || "$USER_INPUT" == "MINOR" || "$USER_INPUT" == "PATCH" ]]; then
+                    BUMP_TYPE=$USER_INPUT
+                    break
+                fi
+                echo "Please manually enter the bump type (MAJOR, MINOR, PATCH):" > /dev/tty 2>/dev/null || true
+            done
+        fi
     fi
 
     # Apply the version bump

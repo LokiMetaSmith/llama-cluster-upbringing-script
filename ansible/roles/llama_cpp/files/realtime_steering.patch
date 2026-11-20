@@ -65,7 +65,7 @@ index 1293c8640..7b175466f 100644
 +
 +                    params_base.control_vectors = cv_infos;
 +
-+                    common_control_vector_data cv_data = common_control_vector_load(cv_infos);
++                    common_control_vector_data cv_data = common_control_vector_load(cv_infos, model_tgt ? llama_model_n_layer(model_tgt) : 0);
 +
 +                    if (cv_data.n_embd == -1) {
 +                         SRV_ERR("%s", "failed to load control vectors\n");
@@ -113,7 +113,7 @@ diff --git a/tools/server/server-context.h b/tools/server/server-context.h
 index 764df0e08..7471ebc32 100644
 --- a/tools/server/server-context.h
 +++ b/tools/server/server-context.h
-@@ -108,6 +108,9 @@ struct server_context {
+@@ -89,6 +89,9 @@ struct server_context {
      // not thread-safe, should only be used from the main thread
      server_context_meta get_meta() const;
 
@@ -122,7 +122,7 @@ index 764df0e08..7471ebc32 100644
 +
      // note: must be set before load_model() is called
      void set_state_callback(server_state_callback_t callback);
- };
+
 @@ -164,6 +167,8 @@ struct server_routes {
      server_http_context::handler_t post_systemone;
      server_http_context::handler_t get_lora_adapters;
@@ -155,7 +155,7 @@ index 25ff01512..f3facc536 100644
      server_task() = default;
 
      server_task(server_task_type type) : type(type) {}
-@@ -564,6 +569,29 @@ struct server_task_result_apply_lora : server_task_result {
+@@ -689,6 +689,29 @@ struct server_task_result_apply_lora : server_task_result {
      virtual json to_json() override;
  };
 
@@ -182,9 +182,9 @@ index 25ff01512..f3facc536 100644
 +    }
 +};
 +
- struct server_prompt {
-     server_tokens tokens;
-
+ // used exclusively by router mode
+ struct server_task_result_router : server_task_result {
+     json data;
 diff --git a/tools/server/server.cpp b/tools/server/server.cpp
 index 5fe2729ba..18b1b92c4 100644
 --- a/tools/server/server.cpp
